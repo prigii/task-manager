@@ -4,22 +4,39 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
 export default function Home() {
-  const [tasks, setTasks] = useState<any[]>([]);
+  interface Task {
+    id: number;
+    text: string;
+    done: boolean;
+    category: string;
+    due_date: string | null;
+  }
+
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState("");
   const [category, setCategory] = useState("General");
   const [dueDate, setDueDate] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
   const [error, setError] = useState<string | null>(null);
 
-  const categories = ["General", "Work", "Personal", "Urgent"]; // Add more as needed
+  const categories = ["General", "Work", "Personal", "Urgent"];
 
+  // Map categories to Tailwind colors
+  const categoryColors: { [key: string]: string } = {
+    General: "bg-gray-100",
+    Work: "bg-blue-100",
+    Personal: "bg-green-100",
+    Urgent: "bg-red-100",
+  };
+
+  // Rest of your existing useEffect and functions...
   // Fetch tasks on load
   useEffect(() => {
     const fetchTasks = async () => {
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
-        .order("due_date", { ascending: true, nullsLast: true });
+        .order("due_date", { ascending: true, nullsFirst: false });
       if (error) {
         console.error("Fetch error:", error.message);
         setError(error.message);
@@ -60,9 +77,17 @@ export default function Home() {
       setDueDate("");
       setCategory("General");
       setError(null);
-    } catch (err: any) {
-      console.error("Add task error:", err.message);
-      setError(err.message || "Failed to add task");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Add task error:", err.message);
+      } else {
+        console.error("Add task error:", err);
+      }
+      if (err instanceof Error) {
+        setError(err.message || "Failed to add task");
+      } else {
+        setError("Failed to add task");
+      }
     }
   };
 
@@ -171,10 +196,11 @@ export default function Home() {
                 task.due_date &&
                 !task.done &&
                 new Date(task.due_date) < new Date();
+              const bgColor = categoryColors[task.category] || "bg-gray-100"; // Fallback to gray
               return (
                 <li
                   key={task.id}
-                  className="flex justify-between items-center p-2 bg-gray-50 rounded hover:bg-gray-100"
+                  className={`flex justify-between items-center p-2 ${bgColor} rounded hover:bg-opacity-80`}
                 >
                   <div className="flex flex-col">
                     <span
